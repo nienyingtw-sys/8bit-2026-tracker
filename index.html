@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -300,7 +298,6 @@ function renderMatrixTable() {
         });
     });
     
-    // 4. 更新總表數據
     if (typeof updateMatrixSummary === "function") updateMatrixSummary();
 }
     
@@ -313,12 +310,10 @@ function setCurrency(val) {
     });
 }
 
-// 控制稅務按鈕切換
 function setTaxMode(val) {
     document.getElementById('tax_mode').value = val;
     const btns = document.querySelectorAll('#tax_toggle button');
     btns.forEach(b => {
-        // 這裡會抓取我們剛剛設定的 NET 或 GROSS
         const active = b.getAttribute('data-val') === val;
         b.className = `flex-1 py-2 text-[10px] font-black rounded-xl transition-all ${
             active ? 'bg-white shadow-sm text-slate-950' : 'text-slate-400'
@@ -326,9 +321,6 @@ function setTaxMode(val) {
     });
 }
 
-// 修正子項目點擊搜尋功能
-
-    // --- V14.1 Core Calculation Logic ---
 function openEditMode(record) {
     editingId = record.id;
     document.getElementById('trans_date').value = record.created_at.slice(0, 10);
@@ -339,7 +331,6 @@ function openEditMode(record) {
     document.getElementById('sub_cat').value = record.subcategory;
 
     const rawNote = record.note || "";
-    // 正則：嘗試抓取金額與幣別
     const taxMatch = rawNote.match(/\[TAX_INCL:(?:([A-Z]{3})\s)?([\d,]+)\]/);
 
     if (taxMatch) {
@@ -351,21 +342,16 @@ function openEditMode(record) {
         setTaxMode('NET');
         document.getElementById('amt_view').value = record.amount;
     }
-
-    // 關鍵修正：徹底移除備註中的標籤文字
     document.getElementById('note_field').value = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
 
     numFormat(document.getElementById('amt_view'));
-// --- 建議優化這一段 ---
-    // 1. 更新主按鈕
+
     const submitBtn = document.getElementById('main-submit-btn');
     if (submitBtn) {
         submitBtn.innerText = "UPDATE TRANSACTION";
-        // 使用 className 直接切換，確保顏色從黑色 (slate-950) 變成藍色 (blue-600)
         submitBtn.className = "flex-2 w-full bg-blue-600 text-white py-6 rounded-[2rem] font-black text-lg hover:bg-blue-700 transition-all uppercase tracking-widest";
     }
 
-    // 2. 顯示取消按鈕 (讓使用者可以退出編輯模式)
     const cancelBtn = document.getElementById('cancel-edit-btn');
     if (cancelBtn) {
         cancelBtn.classList.remove('hidden');
@@ -475,8 +461,6 @@ function openEditMode(record) {
     function toggleMatrix() { document.getElementById('matrix-modal').classList.toggle('hidden'); if(!document.getElementById('matrix-modal').classList.contains('hidden')) renderMatrixTable(); }
     function toggleSubRows(main) { document.querySelectorAll(`.sub-${main}`).forEach(el => el.classList.toggle('show-row')); }
     function saveAndReload() { localStorage.setItem('8bit_v100_matrix', JSON.stringify(localData)); toggleMatrix(); fetchCloudData(); }
-
-// 確保數據抓取後會觸發篩選，篩選再觸發 Dashboard 更新
 async function fetchCloudData() {
     const { data, error } = await _client.from('transactions').select('*');
     if (error) { console.error(error); return; }
@@ -505,41 +489,55 @@ function filterAll() {
     monthlyData.forEach(i => {
         const isInc = i.type === 'income';
         mNet += (isInc ? i.amount : -i.amount);
-        
-        // 渲染交易清單 (略，保持你原本正確的列表邏輯)
+
         list.innerHTML += `<div class="p-4 mb-2 bg-white rounded-xl shadow-sm">...</div>`; 
     });
 
     const netEl = document.getElementById('month-net-val');
     if (netEl) netEl.innerText = `$${mNet.toLocaleString()}`;
 
-    // 【關鍵】在這裡呼叫更新看板，確保畫面同步
     updateDashboard();
 }
 
 function updateDashboard() {
     let yR = 0, yE = 0; 
     let catActualsY = {}; 
-    
-    // 計算 2026 全年數據
-    currentFetchedData.forEach(i => {
-        if (i.created_at.startsWith("2026")) {
-            if (i.type === 'income') yR += i.amount;
-            else yE += i.amount;
 
-            if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
-            catActualsY[i.main_category] += i.amount;
-        }
+    // 1. 從輸入框抓取年度目標（加上安全預設值 1）
+    const revGoal = parseInt(document.getElementById('yearly-revenue-goal')?.value.replace(/,/g, '')) || 1;
+    const expGoal = parseInt(document.getElementById('yearly-expense-goal')?.value.replace(/,/g, '')) || 1;
+
+    // 2. 統計實際金額
+    currentFetchedData.forEach(i => {
+        if (i.type === 'income') yR += i.amount;
+        else yE += i.amount;
+
+        if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
+        catActualsY[i.main_category] += i.amount;
     });
 
-    const createHorizontalBar = (title, actualY) => {
+    // 3. 改進的進度條計算函數
+    const getBarHTML = (title, actualY, type) => {
+        // 從你的預算矩陣（Matrix）輸入框中抓取該類別分配的百分比
+        const pctInput = document.querySelector(`input[data-main-cat="${title}"]`);
+        const allocatedPct = pctInput ? parseFloat(pctInput.value) || 0 : 0;
+        
+        // 該類別目標 = 年度總目標 * 分配百分比
+        const totalGoal = (type === 'income') ? revGoal : expGoal;
+        const mainTarget = totalGoal * (allocatedPct / 100);
+        
+        // 計算進度，若無目標則顯示 0%
+        const progress = mainTarget > 0 ? Math.min((actualY / mainTarget) * 100, 100) : 0;
+        const colorClass = (type === 'income') ? 'bg-blue-600' : (progress > 90 ? 'bg-red-500' : 'bg-slate-950');
+
         return `
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center gap-6 hover:shadow-md transition-all">
                 <div class="w-full md:w-48 shrink-0">
                     <b class="text-sm text-slate-800 uppercase font-black">${title}</b>
+                    <span class="text-[9px] text-slate-400 block">${progress.toFixed(1)}% OF BUDGET</span>
                 </div>
                 <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full bg-blue-600 transition-all duration-1000" style="width: 30%"></div>
+                    <div class="h-full ${colorClass} transition-all duration-1000" style="width: ${progress}%"></div>
                 </div>
                 <div class="w-full md:w-32 text-right shrink-0">
                     <b class="text-lg text-slate-950 font-black italic">$${actualY.toLocaleString()}</b>
@@ -547,13 +545,14 @@ function updateDashboard() {
             </div>`;
     };
 
+    // 4. 定義類別
     const incomeCats = ["線上通路", "線下通路", "B2B/其他"];
     const expenseCats = ["產品開發與採購", "物流與倉儲營運", "行銷推廣與拍攝", "通路租金與抽成", "人事與管理", "短期專案/Pop-up"];
 
+    // 5. 渲染 UI
     const dash = document.getElementById('annual-dashboard');
     if (dash) {
-        // 強制洗掉 HTML 上的舊 Class
-        dash.className = "mb-10 w-full"; 
+        // 注意：這裡只更新進度條內容區域，保留上方總額顯示卡片
         dash.innerHTML = `
             <div class="w-full flex flex-col gap-10">
                 <div class="bg-[#0F172A] p-10 md:p-14 rounded-[3rem] shadow-2xl border border-white/5 text-white">
@@ -566,11 +565,11 @@ function updateDashboard() {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <section class="space-y-4">
                         <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Income Performance</h4>
-                        <div class="flex flex-col gap-3">${incomeCats.map(cat => createHorizontalBar(cat, catActualsY[cat]||0)).join('')}</div>
+                        <div class="flex flex-col gap-3">${incomeCats.map(cat => getBarHTML(cat, catActualsY[cat]||0, 'income')).join('')}</div>
                     </section>
                     <section class="space-y-4">
                         <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Expense Status</h4>
-                        <div class="flex flex-col gap-3">${expenseCats.map(cat => createHorizontalBar(cat, catActualsY[cat]||0)).join('')}</div>
+                        <div class="flex flex-col gap-3">${expenseCats.map(cat => getBarHTML(cat, catActualsY[cat]||0, 'expense')).join('')}</div>
                     </section>
                 </div>
             </div>`;
@@ -586,7 +585,6 @@ async function deleteTransaction(id, event) {
     }
 }
 
-// 確保 setSearch 函數存在
 function setSearch(val) {
     const input = document.getElementById('searchInput');
     if (input) {
@@ -615,22 +613,18 @@ function filterAll() {
     let mNet = 0;
     let searchTotal = 0; 
 
-// --- 修正後的渲染迴圈 ---
     monthlyData.forEach(i => {
         const isInc = i.type === 'income';
         mNet += (isInc ? i.amount : -i.amount);
         searchTotal += i.amount;
 
-        // 1. 處理備註與 TAX 顯示邏輯
 const rawNote = i.note || "";
-    // 提取原始金額，例如從 [TAX_INCL:JPY 10,000] 抓取 "JPY 10,000"
     const taxMatch = rawNote.match(/\[TAX_INCL:(.*?)\]/);
     const originalAmount = taxMatch ? taxMatch[1] : ""; // 如果有標籤就抓取內容，否則為空串
 
     const cleanNote = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
     const displayNote = cleanNote.replace(/(#[\w\u4e00-\u9fa5]+)/g, 
         `<span class="text-blue-500 cursor-pointer hover:underline" onclick="event.stopPropagation(); setSearch('$1')">$1</span>`);
-        // 渲染列表 HTML
 list.innerHTML += `
         <div class="group bg-white p-5 rounded-[2rem] flex justify-between items-center mb-4 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-sm">
             <div onclick='openEditMode(${JSON.stringify(i)})' class="flex-1">
@@ -654,7 +648,6 @@ list.innerHTML += `
         </div>`;
 });
 
-    // 2. 搜尋加總黑框 (補回)
     if (keyword !== "") {
         list.innerHTML += `
             <div class="sticky bottom-0 bg-slate-950 text-white p-6 rounded-[2rem] flex justify-between items-center shadow-2xl mt-4 border-t border-white/10">
@@ -662,8 +655,6 @@ list.innerHTML += `
                 <b class="text-2xl font-black italic text-green-400">$${searchTotal.toLocaleString()}</b>
             </div>`;
     }
-
-    // 3. 更新頂部金額與看板
     document.getElementById('month-net-val').innerText = `$${mNet.toLocaleString()}`;
     updateDashboard();
 } 
@@ -671,12 +662,8 @@ list.innerHTML += `
 function updateDashboard() {
     let yR = 0, yE = 0; 
     let catActualsY = {}; 
-    
-    // 1. 取得當前月份（確保數據正確）
     const monthFilterEl = document.getElementById('monthFilter');
     const currentMonthStr = monthFilterEl ? monthFilterEl.value : "2026-01";
-
-    // 2. 數據計算邏輯
     currentFetchedData.forEach(i => {
         if (i.type === 'income') {
             yR += i.amount;
@@ -686,10 +673,7 @@ function updateDashboard() {
         if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
         catActualsY[i.main_category] += i.amount;
     });
-
-    // 3. 長條狀組件 (白底、長條、Flex 佈局)
     const createHorizontalBar = (title, actualY) => {
-        // 這裡暫時以固定預算或比例顯示，確保長條狀出現
         return `
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center gap-6 hover:shadow-md transition-all">
                 <div class="w-full md:w-48 shrink-0">
@@ -709,7 +693,6 @@ function updateDashboard() {
 
     const dash = document.getElementById('annual-dashboard');
     if (dash) {
-        // 【關鍵】強制移除可能殘留的黑底 Class
         dash.className = "mb-10 w-full"; 
 
         dash.innerHTML = `
@@ -784,10 +767,8 @@ async function submitToCloud() {
 
     let res;
     if (editingId) {
-        // 編輯模式：更新現有資料
         res = await _client.from('transactions').update(payload).eq('id', editingId);
     } else {
-        // 新增模式
         res = await _client.from('transactions').insert([payload]);
     }
 
@@ -801,27 +782,22 @@ async function submitToCloud() {
 
 function resetForm() {
     editingId = null; // 重設編輯狀態
-    
-    // 1. 恢復主按鈕為「新增」狀態
     const submitBtn = document.getElementById('main-submit-btn');
     if (submitBtn) {
         submitBtn.innerText = "ADD TRANSACTION";
         submitBtn.className = "w-full bg-slate-950 text-white py-6 rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all uppercase tracking-widest";
     }
-    
-    // 2. 隱藏取消按鈕
+
     const cancelBtn = document.getElementById('cancel-edit-btn');
     if (cancelBtn) {
         cancelBtn.classList.add('hidden');
     }
 
-    // 3. 清空輸入欄位（恢復當天日期與空白金額）
     document.getElementById('trans_date').value = new Date().toISOString().slice(0, 10);
     document.getElementById('amt_view').value = '';
     document.getElementById('amt_val').value = '0';
     document.getElementById('note_field').value = '';
-    
-    // 4. 恢復分類與稅務狀態
+
     setCurrency('TWD');
     setTaxMode('NET');
     refreshCategories();
@@ -878,52 +854,3 @@ function renderAnalysis(monthlyData, allData, currentMonthIdx) {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
