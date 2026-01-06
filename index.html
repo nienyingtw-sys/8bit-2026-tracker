@@ -473,6 +473,7 @@ function filterAll() {
     const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
     const filterMonthStr = document.getElementById('monthFilter').value;
     
+    // 1. 過濾資料
     const monthlyData = currentFetchedData.filter(i => {
         const matchesDate = i.created_at.startsWith(filterMonthStr);
         const matchesKey = keyword === "" || 
@@ -483,98 +484,159 @@ function filterAll() {
     });
 
     const list = document.getElementById('detailList');
-    list.innerHTML = '';
+    list.innerHTML = ''; // 清空舊列表
     let mNet = 0;
+    let searchTotal = 0; 
 
+    // 2. 渲染每一筆交易紀錄
     monthlyData.forEach(i => {
         const isInc = i.type === 'income';
         mNet += (isInc ? i.amount : -i.amount);
+        searchTotal += i.amount;
 
-        list.innerHTML += `<div class="p-4 mb-2 bg-white rounded-xl shadow-sm">...</div>`; 
+        const rawNote = i.note || "";
+        // 處理備註中的稅務標籤與 #標籤 高亮
+        const cleanNote = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
+        const displayNote = cleanNote.replace(/(#[\w\u4e00-\u9fa5]+)/g, 
+            `<span class="text-blue-500 cursor-pointer hover:underline" onclick="event.stopPropagation(); setSearch('$1')">$1</span>`);
+
+        list.innerHTML += `
+            <div class="group bg-white p-5 rounded-[2rem] flex justify-between items-center mb-4 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-sm">
+                <div onclick='openEditMode(${JSON.stringify(i)})' class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase">${i.subcategory}</span>
+                        <span class="text-[9px] text-slate-300 font-bold uppercase">${i.main_category}</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 font-medium">
+                        ${i.created_at.slice(8, 10)}日 | ${displayNote}
+                    </p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <b class="text-xl font-black italic ${isInc ? 'text-green-600' : 'text-slate-950'}">$${i.amount.toLocaleString()}</b>
+                    <button onclick="deleteTransaction(${i.id}, event)" class="p-2 text-slate-200 hover:text-red-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>`;
     });
 
+    // 3. 如果有搜尋關鍵字，顯示搜尋總計
+    if (keyword !== "") {
+        list.innerHTML += `
+            <div class="sticky bottom-0 bg-slate-950 text-white p-6 rounded-[2rem] flex justify-between items-center shadow-2xl mt-4 border-t border-white/10">
+                <span class="text-[10px] font-black tracking-widest uppercase opacity-60">Search Total</span>
+                <b class="text-2xl font-black italic text-green-400">$${searchTotal.toLocaleString()}</b>
+            </div>`;
+    }
+
+    // 4. 更新上方月份結餘文字
     const netEl = document.getElementById('month-net-val');
     if (netEl) netEl.innerText = `$${mNet.toLocaleString()}`;
 
+    // 5. 同步更新進度條儀表板
     updateDashboard();
 }
 
 function updateDashboard() {
     let yR = 0, yE = 0; 
-    let catActualsY = {}; 
+    let catActualsM = {}; // 當月實際
+    let catActualsY = {}; // 全年累計
+    
+    const filterMonthStr = document.getElementById('monthFilter').value; // 格式 YYYY-MM
 
-    // 1. 從輸入框抓取年度目標（加上安全預設值 1）
-    const revGoal = parseInt(document.getElementById('yearly-revenue-goal')?.value.replace(/,/g, '')) || 1;
-    const expGoal = parseInt(document.getElementById('yearly-expense-goal')?.value.replace(/,/g, '')) || 1;
+    // 1. 取得年度目標總額
+    const revGoal = parseInt(document.getElementById('yearly-revenue-goal')?.value.replace(/,/g, '')) || 0;
+    const expGoal = parseInt(document.getElementById('yearly-expense-goal')?.value.replace(/,/g, '')) || 0;
 
-    // 2. 統計實際金額
+    // 2. 遍歷所有資料進行統計
     currentFetchedData.forEach(i => {
-        if (i.type === 'income') yR += i.amount;
-        else yE += i.amount;
+        // 全年統計 (2026)
+        if (i.created_at.startsWith("2026")) {
+            if (i.type === 'income') yR += i.amount;
+            else yE += i.amount;
 
-        if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
-        catActualsY[i.main_category] += i.amount;
+            if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
+            catActualsY[i.main_category] += i.amount;
+        }
+        // 當月統計 (根據左側選取的月份)
+        if (i.created_at.startsWith(filterMonthStr)) {
+            if (!catActualsM[i.main_category]) catActualsM[i.main_category] = 0;
+            catActualsM[i.main_category] += i.amount;
+        }
     });
 
-    // 3. 改進的進度條計算函數
-    const getBarHTML = (title, actualY, type) => {
-        // 從你的預算矩陣（Matrix）輸入框中抓取該類別分配的百分比
+    // 3. 核心進度條組件
+    const createHorizontalBar = (title, actualM, type) => {
         const pctInput = document.querySelector(`input[data-main-cat="${title}"]`);
         const allocatedPct = pctInput ? parseFloat(pctInput.value) || 0 : 0;
         
-        // 該類別目標 = 年度總目標 * 分配百分比
-        const totalGoal = (type === 'income') ? revGoal : expGoal;
-        const mainTarget = totalGoal * (allocatedPct / 100);
+        const totalYearlyGoal = (type === 'income') ? revGoal : expGoal;
+        const mainYearlyTarget = totalYearlyGoal * (allocatedPct / 100);
+        const mainMonthlyTarget = mainYearlyTarget / 12;
+
+        // 計算當月達成率 (0-100%)
+        const monthProgress = mainMonthlyTarget > 0 ? Math.min((actualM / mainMonthlyTarget) * 100, 100) : 0;
         
-        // 計算進度，若無目標則顯示 0%
-        const progress = mainTarget > 0 ? Math.min((actualY / mainTarget) * 100, 100) : 0;
-        const colorClass = (type === 'income') ? 'bg-blue-600' : (progress > 90 ? 'bg-red-500' : 'bg-slate-950');
+        // 計算全年累計進度 (%)
+        const yearlyActual = catActualsY[title] || 0;
+        const yearProgressPct = mainYearlyTarget > 0 ? ((yearlyActual / mainYearlyTarget) * 100).toFixed(1) : "0.0";
+
+        const barColor = (type === 'income') ? 'bg-blue-600' : (monthProgress > 95 ? 'bg-red-500' : 'bg-slate-900');
 
         return `
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center gap-6 hover:shadow-md transition-all">
-                <div class="w-full md:w-48 shrink-0">
-                    <b class="text-sm text-slate-800 uppercase font-black">${title}</b>
-                    <span class="text-[9px] text-slate-400 block">${progress.toFixed(1)}% OF BUDGET</span>
+            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 flex flex-col gap-3 hover:shadow-md transition-all">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <b class="text-xs text-slate-800 uppercase font-black block mb-1">${title}</b>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                            Monthly: <span class="${monthProgress > 90 ? 'text-orange-500' : 'text-blue-500'}">${monthProgress.toFixed(1)}%</span>
+                        </span>
+                    </div>
+                    <div class="text-right">
+                        <b class="text-lg text-slate-950 font-black italic block">$${actualM.toLocaleString()}</b>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                            Yearly Cum.: <span class="text-slate-950">${yearProgressPct}%</span>
+                        </span>
+                    </div>
                 </div>
-                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full ${colorClass} transition-all duration-1000" style="width: ${progress}%"></div>
-                </div>
-                <div class="w-full md:w-32 text-right shrink-0">
-                    <b class="text-lg text-slate-950 font-black italic">$${actualY.toLocaleString()}</b>
+                <div class="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="absolute top-0 left-0 h-full ${barColor} transition-all duration-1000" style="width: ${monthProgress}%"></div>
                 </div>
             </div>`;
     };
 
-    // 4. 定義類別
+    // 4. 定義類別並渲染到頁面
+// ... 在 updateDashboard 函數內的 createHorizontalBar 定義之後加入以下內容 ...
+
     const incomeCats = ["線上通路", "線下通路", "B2B/其他"];
     const expenseCats = ["產品開發與採購", "物流與倉儲營運", "行銷推廣與拍攝", "通路租金與抽成", "人事與管理", "短期專案/Pop-up"];
 
-    // 5. 渲染 UI
     const dash = document.getElementById('annual-dashboard');
     if (dash) {
-        // 注意：這裡只更新進度條內容區域，保留上方總額顯示卡片
         dash.innerHTML = `
             <div class="w-full flex flex-col gap-10">
                 <div class="bg-[#0F172A] p-10 md:p-14 rounded-[3rem] shadow-2xl border border-white/5 text-white">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl mx-auto">
-                        <div><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Revenue 2026</p><h3 class="text-5xl font-black italic text-white tracking-tighter">$${yR.toLocaleString()}</h3></div>
-                        <div class="md:border-l md:border-white/10 md:pl-10"><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Expense 2026</p><h3 class="text-5xl font-black italic text-white tracking-tighter">$${yE.toLocaleString()}</h3></div>
+                        <div><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Total Revenue 2026</p><h3 class="text-5xl font-black italic text-white tracking-tighter">$${yR.toLocaleString()}</h3></div>
+                        <div class="md:border-l md:border-white/10 md:pl-10"><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Total Expense 2026</p><h3 class="text-5xl font-black italic text-white tracking-tighter">$${yE.toLocaleString()}</h3></div>
                         <div class="md:border-l md:border-white/10 md:pl-10"><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Net Profit</p><h3 class="text-5xl font-black italic ${yR-yE >= 0 ? 'text-green-400' : 'text-red-500'} tracking-tighter">$${(yR-yE).toLocaleString()}</h3></div>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <section class="space-y-4">
                         <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Income Performance</h4>
-                        <div class="flex flex-col gap-3">${incomeCats.map(cat => getBarHTML(cat, catActualsY[cat]||0, 'income')).join('')}</div>
+                        <div class="flex flex-col gap-3">${incomeCats.map(cat => createHorizontalBar(cat, catActualsM[cat]||0, 'income')).join('')}</div>
                     </section>
                     <section class="space-y-4">
                         <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Expense Status</h4>
-                        <div class="flex flex-col gap-3">${expenseCats.map(cat => getBarHTML(cat, catActualsY[cat]||0, 'expense')).join('')}</div>
+                        <div class="flex flex-col gap-3">${expenseCats.map(cat => createHorizontalBar(cat, catActualsM[cat]||0, 'expense')).join('')}</div>
                     </section>
                 </div>
             </div>`;
     }
-}
+} // 確保 updateDashboard 的括號在這裡結束
     
 async function deleteTransaction(id, event) {
     event.stopPropagation();
@@ -664,73 +726,67 @@ function updateDashboard() {
     let catActualsY = {}; 
     const monthFilterEl = document.getElementById('monthFilter');
     const currentMonthStr = monthFilterEl ? monthFilterEl.value : "2026-01";
-    currentFetchedData.forEach(i => {
-        if (i.type === 'income') {
-            yR += i.amount;
-        } else {
-            yE += i.amount;
+currentFetchedData.forEach(i => {
+        // 全年統計
+        if (i.created_at.startsWith("2026")) {
+            if (i.type === 'income') yR += i.amount;
+            else yE += i.amount;
+            if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
+            catActualsY[i.main_category] += i.amount;
         }
-        if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
-        catActualsY[i.main_category] += i.amount;
+        // 新增：當月統計 (用於進度條)
+        if (i.created_at.startsWith(filterMonthStr)) {
+            if (!catActualsM[i.main_category]) catActualsM[i.main_category] = 0;
+            catActualsM[i.main_category] += i.amount;
+        }
     });
-    const createHorizontalBar = (title, actualY) => {
-        return `
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center gap-6 hover:shadow-md transition-all">
-                <div class="w-full md:w-48 shrink-0">
-                    <b class="text-sm text-slate-800 uppercase font-black">${title}</b>
-                </div>
-                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full bg-blue-600 transition-all duration-1000" style="width: 30%"></div>
-                </div>
-                <div class="w-full md:w-32 text-right shrink-0">
-                    <b class="text-lg text-slate-950 font-black italic">$${actualY.toLocaleString()}</b>
-                </div>
-            </div>`;
-    };
+const createHorizontalBar = (title, actualY, type) => {
+    // 1. 取得年度目標總額
+    const totalYearlyGoal = (type === 'income') ? 
+        (parseInt(document.getElementById('yearly-revenue-goal')?.value.replace(/,/g, '')) || 0) : 
+        (parseInt(document.getElementById('yearly-expense-goal')?.value.replace(/,/g, '')) || 0);
 
-    const incomeCats = ["線上通路", "線下通路", "B2B/其他"];
-    const expenseCats = ["產品開發與採購", "物流與倉儲營運", "行銷推廣與拍攝", "通路租金與抽成", "人事與管理", "短期專案/Pop-up"];
+    // 2. 取得該類別在矩陣中設定的分配比例 (%)
+    const pctInput = document.querySelector(`input[data-main-cat="${title}"]`);
+    const allocatedPct = pctInput ? parseFloat(pctInput.value) || 0 : 0;
 
-    const dash = document.getElementById('annual-dashboard');
-    if (dash) {
-        dash.className = "mb-10 w-full"; 
+    // 3. 計算各項目標
+    const yearlyCatTarget = totalYearlyGoal * (allocatedPct / 100); // 該類別全年目標
+    const monthlyCatTarget = yearlyCatTarget / 12; // 該類別平均每月目標
 
-        dash.innerHTML = `
-            <div class="w-full flex flex-col gap-10">
-                <div class="bg-[#0F172A] p-10 md:p-14 rounded-[3rem] shadow-2xl border border-white/5">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl mx-auto">
-                        <div>
-                            <p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Revenue 2026</p>
-                            <h3 class="text-5xl font-black italic text-white tracking-tighter">$${yR.toLocaleString()}</h3>
-                        </div>
-                        <div class="md:border-l md:border-white/10 md:pl-10">
-                            <p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Expense 2026</p>
-                            <h3 class="text-5xl font-black italic text-white tracking-tighter">$${yE.toLocaleString()}</h3>
-                        </div>
-                        <div class="md:border-l md:border-white/10 md:pl-10">
-                            <p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Net Profit</p>
-                            <h3 class="text-5xl font-black italic ${yR-yE >= 0 ? 'text-green-400' : 'text-red-500'} tracking-tighter">$${(yR-yE).toLocaleString()}</h3>
-                        </div>
-                    </div>
+    // 4. 計算進度 (為了開會直觀，我們計算當月達成率)
+    const monthProgress = monthlyCatTarget > 0 ? Math.min((actualY / monthlyCatTarget) * 100, 100) : 0;
+    
+    // 5. 額外計算：該類別「目前累計」佔「全年目標」的百分比
+    // (這部分假設你已經在 updateDashboard 統計了全年累計值 catActualsY[title])
+    const yearlyActual = catActualsY[title] || 0;
+    const yearProgress = yearlyCatTarget > 0 ? ((yearlyActual / yearlyCatTarget) * 100).toFixed(1) : 0;
+
+    // 顏色定義：收入用藍色，支出若超過該月預算則變紅
+    const barColor = (type === 'income') ? 'bg-blue-600' : (monthProgress > 95 ? 'bg-red-500' : 'bg-slate-900');
+
+    return `
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 flex flex-col gap-3 hover:shadow-md transition-all">
+            <div class="flex justify-between items-end">
+                <div>
+                    <b class="text-xs text-slate-800 uppercase font-black block mb-1">${title}</b>
+                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                        Monthly Progress: <span class="${monthProgress > 90 ? 'text-orange-500' : 'text-blue-500'}">${monthProgress.toFixed(1)}%</span>
+                    </span>
                 </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <section class="space-y-4">
-                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Income Performance</h4>
-                        <div class="flex flex-col gap-3">
-                            ${incomeCats.map(cat => createHorizontalBar(cat, catActualsY[cat]||0)).join('')}
-                        </div>
-                    </section>
-                    <section class="space-y-4">
-                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Expense Status</h4>
-                        <div class="flex flex-col gap-3">
-                            ${expenseCats.map(cat => createHorizontalBar(cat, catActualsY[cat]||0)).join('')}
-                        </div>
-                    </section>
+                <div class="text-right">
+                    <b class="text-lg text-slate-950 font-black italic block">$${actualY.toLocaleString()}</b>
+                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                        Yearly Cum.: <span class="text-slate-950">${yearProgress}%</span>
+                    </span>
                 </div>
-            </div>`;
-    }
-}
+            </div>
+            
+            <div class="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="absolute top-0 left-0 h-full ${barColor} transition-all duration-1000" style="width: ${monthProgress}%"></div>
+            </div>
+        </div>`;
+};
     
 function refreshCategories() { 
     const t=document.getElementById('type').value, m=document.getElementById('main_cat'); 
