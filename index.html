@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-BIT 2026 STRATEGIC V14.1</title>
+    <title>8-BIT 2026 STRATEGIC V14.2</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -20,7 +20,6 @@
         .sub-row.show-row { display: table-row !important; }
         .group-row { background-color: #f8fafc !important; border-bottom: 2px solid #f1f5f9; }
         .alert-red { background-color: #fee2e2 !important; color: #dc2626 !important; }
-        .alert-green { background-color: #ecfdf5 !important; color: #059669; }
     </style>
 </head>
 <body class="text-slate-900 p-4 md:p-8">
@@ -42,7 +41,8 @@
             </div>
         </header>
 
-<div id="annual-dashboard" class="mb-10 w-full"></div>
+        <div id="annual-dashboard" class="mb-10 w-full"></div>
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
             <div class="lg:col-span-5 space-y-6">
                 <div class="glass-card p-6 flex flex-col gap-5">
@@ -59,59 +59,53 @@
             </div>
 
             <div class="lg:col-span-7">
-<div class="glass-card p-12" id="input-container">
-    <div class="space-y-6"> <div class="grid grid-cols-2 gap-8">
-            <input id="trans_date" type="date" class="input-base text-xs">
-            <select id="type" onchange="refreshCategories()" class="input-base text-xs">
-                <option value="expense">支出 (-)</option>
-                <option value="income">收入 (+)</option>
-            </select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-8">
-            <div class="flex flex-col">
-                <label class="text-[9px] font-black text-slate-300 uppercase mb-2 ml-4">Currency</label>
-                <div class="flex bg-slate-100 p-1 rounded-2xl" id="currency_toggle">
-                    <button onclick="setCurrency('TWD')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all bg-white shadow-sm text-slate-950" data-val="TWD">TWD</button>
-                    <button onclick="setCurrency('JPY')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all text-slate-400" data-val="JPY">JPY</button>
-                    <button onclick="setCurrency('CNY')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all text-slate-400" data-val="CNY">CNY</button>
+                <div class="glass-card p-12" id="input-container">
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 gap-8">
+                            <input id="trans_date" type="date" class="input-base text-xs">
+                            <select id="type" onchange="refreshCategories()" class="input-base text-xs">
+                                <option value="expense">支出 (-)</option>
+                                <option value="income">收入 (+)</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-8">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-black text-slate-300 uppercase mb-2 ml-4">Currency</label>
+                                <div class="flex bg-slate-100 p-1 rounded-2xl" id="currency_toggle">
+                                    <button onclick="setCurrency('TWD')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all bg-white shadow-sm text-slate-950" data-val="TWD">TWD</button>
+                                    <button onclick="setCurrency('JPY')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all text-slate-400" data-val="JPY">JPY</button>
+                                    <button onclick="setCurrency('CNY')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all text-slate-400" data-val="CNY">CNY</button>
+                                </div>
+                                <input type="hidden" id="currency_type" value="TWD">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-black text-slate-300 uppercase mb-2 ml-4">Tax Status</label>
+                                <div class="flex bg-slate-100 p-1 rounded-2xl" id="tax_toggle">
+                                    <button onclick="setTaxMode('NET')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all bg-white shadow-sm text-slate-950" data-val="NET">未稅</button>
+                                    <button onclick="setTaxMode('GROSS')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all text-slate-400" data-val="GROSS">含稅</button>
+                                </div>
+                                <input type="hidden" id="tax_mode" value="NET">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-8">
+                            <select id="main_cat" onchange="updateSubOptions()" class="input-base text-xs"></select>
+                            <select id="sub_cat" class="input-base text-xs"></select>
+                        </div>
+                        <div class="w-full"><input id="note_field" type="text" placeholder="備註內容 / #標籤" class="input-base text-xs w-full"></div>
+                        <div class="pt-6 flex items-baseline gap-4 border-t">
+                            <span class="text-slate-300 font-black text-2xl">$</span>
+                            <input id="amt_view" type="text" placeholder="0" onfocus="numPlain(this)" onblur="numFormat(this)" class="w-full text-slate-950 text-6xl font-black outline-none bg-transparent">
+                            <input type="hidden" id="amt_val" value="0">
+                        </div>
+                        <div id="action-buttons" class="flex gap-4">
+                            <button id="main-submit-btn" onclick="submitToCloud()" class="w-full bg-slate-950 text-white py-6 rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all uppercase tracking-widest">ADD TRANSACTION</button>
+                            <button id="cancel-edit-btn" onclick="resetForm()" class="hidden flex-1 bg-slate-100 text-slate-400 py-6 rounded-[2rem] font-black text-lg hover:bg-slate-200 transition-all uppercase tracking-widest">CANCEL</button>
+                        </div>
+                    </div>
                 </div>
-                <input type="hidden" id="currency_type" value="TWD">
-            </div>
-            <div class="flex flex-col">
-                <label class="text-[9px] font-black text-slate-300 uppercase mb-2 ml-4">Tax Status</label>
-                <div class="flex bg-slate-100 p-1 rounded-2xl" id="tax_toggle">
-                    <button onclick="setTaxMode('NET')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all bg-white shadow-sm text-slate-950" data-val="NET">未稅</button>
-                    <button onclick="setTaxMode('GROSS')" class="flex-1 py-1.5 text-[9px] font-black rounded-xl transition-all text-slate-400" data-val="GROSS">含稅</button>
-                </div>
-                <input type="hidden" id="tax_mode" value="NET">
             </div>
         </div>
-
-        <div class="grid grid-cols-2 gap-8">
-            <select id="main_cat" onchange="updateSubOptions()" class="input-base text-xs"></select>
-            <select id="sub_cat" class="input-base text-xs"></select>
-        </div>
-
-        <div class="w-full">
-            <input id="note_field" type="text" placeholder="備註內容 / #標籤" class="input-base text-xs w-full">
-        </div>
-
-        <div class="pt-6 flex items-baseline gap-4 border-t">
-            <span class="text-slate-300 font-black text-2xl">$</span>
-            <input id="amt_view" type="text" placeholder="0" onfocus="numPlain(this)" onblur="numFormat(this)" class="w-full text-slate-950 text-6xl font-black outline-none bg-transparent">
-            <input type="hidden" id="amt_val" value="0">
-        </div>
-
-<div id="action-buttons" class="flex gap-4">
-    <button id="main-submit-btn" onclick="submitToCloud()" class="w-full bg-slate-950 text-white py-6 rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all uppercase tracking-widest">
-        ADD TRANSACTION
-    </button>
-    <button id="cancel-edit-btn" onclick="resetForm()" class="hidden flex-1 bg-slate-100 text-slate-400 py-6 rounded-[2rem] font-black text-lg hover:bg-slate-200 transition-all uppercase tracking-widest">
-        CANCEL
-    </button>
-</div>
-
+    </div>
 
     <div id="matrix-modal" class="hidden fixed inset-0 z-[400] bg-slate-900/95 backdrop-blur-xl p-4 flex flex-col items-center justify-center">
         <div class="w-full max-w-[1700px] mb-6 flex gap-6 items-end">
@@ -125,721 +119,189 @@
             </div>
             <button onclick="toggleMatrix()" class="text-white text-5xl font-light px-6 hover:text-red-500 transition-colors">✕</button>
         </div>
-
         <div class="w-full max-w-[1700px] bg-white rounded-[3rem] shadow-2xl flex flex-col h-[70vh] overflow-hidden">
-            <div class="overflow-auto flex-1 no-scrollbar">
-                <table class="w-full table-fixed border-collapse text-left">
-                    <tbody id="matrix-body"></tbody>
-                </table>
-            </div>
-            
+            <div class="overflow-auto flex-1 no-scrollbar"><table class="w-full table-fixed border-collapse text-left"><tbody id="matrix-body"></tbody></table></div>
             <div class="px-10 py-6 bg-slate-950 text-white flex justify-between items-center">
                 <div class="flex gap-12">
-                    <div>
-                        <span class="text-[10px] text-slate-500 block font-bold uppercase tracking-wider mb-1">Revenue Allocated</span>
-                        <div class="flex items-baseline gap-2">
-                            <b id="total-revenue-percent" class="text-2xl italic font-black">0%</b>
-                            <span id="total-revenue-amt" class="text-sm text-slate-400 font-bold">$0</span>
-                        </div>
-                    </div>
-                    <div class="border-l border-white/10 pl-12">
-                        <span class="text-[10px] text-slate-500 block font-bold uppercase tracking-wider mb-1">Expense Allocated</span>
-                        <div class="flex items-baseline gap-2">
-                            <b id="total-expense-percent" class="text-2xl italic font-black">0%</b>
-                            <span id="total-expense-amt" class="text-sm text-slate-400 font-bold">$0</span>
-                        </div>
-                    </div>
+                    <div><span class="text-[10px] text-slate-500 block font-bold uppercase mb-1">Revenue Allocated</span><div class="flex items-baseline gap-2"><b id="total-revenue-percent" class="text-2xl italic font-black">0%</b><span id="total-revenue-amt" class="text-sm text-slate-400 font-bold">$0</span></div></div>
+                    <div class="border-l border-white/10 pl-12"><span class="text-[10px] text-slate-500 block font-bold uppercase mb-1">Expense Allocated</span><div class="flex items-baseline gap-2"><b id="total-expense-percent" class="text-2xl italic font-black">0%</b><span id="total-expense-amt" class="text-sm text-slate-400 font-bold">$0</span></div></div>
                 </div>
-                <button onclick="saveAndReload()" class="bg-blue-600 hover:bg-blue-500 text-white px-12 py-4 rounded-2xl font-black text-sm tracking-widest transition-all">SAVE & UPDATE STRATEGY</button>
+                <button onclick="saveAndReload()" class="bg-blue-600 hover:bg-blue-500 text-white px-12 py-4 rounded-2xl font-black text-sm tracking-widest">SAVE & UPDATE STRATEGY</button>
             </div>
         </div>
     </div>
 
 <script>
-const SB_URL = "https://utvynjzwmkptsvfyhfhf.supabase.co";
-const SB_KEY = "sb_publishable_3Q0nQfsGi7MknHHwHmED7g_qvjDNikH";
-// 建立全域 _client 供所有函數使用
-const _client = supabase.createClient(SB_URL, SB_KEY);
+    const SB_URL = "https://utvynjzwmkptsvfyhfhf.supabase.co";
+    const SB_KEY = "sb_publishable_3Q0nQfsGi7MknHHwHmED7g_qvjDNikH";
+    const _client = supabase.createClient(SB_URL, SB_KEY);
     
     let budgetMap, revenueMap, localData, currentFetchedData = [];
-let editingId = null; // 用於追蹤目前是否正在編輯現有資料
+    let editingId = null;
+
     window.onload = () => { setupData(); if(localStorage.getItem('8bit_logged') === 'true') showApp(); };
     
     function setupData() {
-        revenueMap = { "線上營收": ["台灣官網", "日本官網"], "線下通路": ["固定櫃", "寄售點", "pop up活動"], "B2B/其他": ["一般代工", "藝術品委託", "其他收入"] };
-        budgetMap = { "產品開發與採購": ["樣紗/樣本副料", "打樣/加工費", "藝術家授權金", "生產大貨款", "大貨輔料", "採購與開發運費", "參考原樣費"], "物流與倉儲營運": ["日本倉租", "銷貨運費", "通路調撥", "出貨耗材", "其他"], "行銷推廣與拍攝": ["廣告投放", "形象拍攝", "KOL合作", "CRM花費", "行銷佈置"], "通路租金與抽成": ["店員薪資", "通路固定費用-包底租金", "通路變動費用-抽成/手續費", "通路相關雜支", "官網平台費", "官網手續費"], "人事與管理": ["員工薪資", "差旅費用", "勞健保預勞退", "數位系統訂閱費", "員工福利支出", "員工教育訓練", "交際應酬費", "會計/稅務顧問費", "行政雜項"], "短期專案/Pop-up": ["快閃場地", "臨時薪資", "物流運費/雜支", "差旅費用", "進場裝潢費", "撤場清潔費"] };
+        revenueMap = { "線上通路": ["台灣官網", "日本官網"], "線下通路": ["固定櫃", "寄售點", "pop up活動"], "B2B/其他": ["一般代工", "藝術品委託", "其他收入"] };
+        budgetMap = { "產品開發與採購": ["樣紗/樣本副料", "打樣/加工費", "藝術家授權金", "生產大貨款", "大貨輔料", "採購與開發運費", "參考原樣費"], "物流與倉儲營運": ["日本倉租", "銷貨運費", "通路調撥", "出貨耗材", "其他"], "行銷推廣與拍攝": ["廣告投放", "形象拍攝", "KOL合作", "CRM花費", "行銷佈置"], "通路租金與抽成": ["店員薪資", "通路包底租金", "通路抽成", "通路雜支", "官網平台費", "官網手續費"], "人事與管理": ["員工薪資", "差旅費用", "勞健保預退", "系統訂閱費", "福利支出", "教育訓練", "應酬費", "顧問費", "行政雜項"], "短期專案/Pop-up": ["快閃場地", "臨時薪資", "運費雜支", "差旅費用", "進場裝潢費", "撤場清潔費"] };
         localData = JSON.parse(localStorage.getItem('8bit_v100_matrix')) || {};
     }
 
-function updateSubPercent(main, sub, percent) {
-    // 1. 安全檢查：確保資料路徑存在，否則初始化它
-    if (!localData[main]) localData[main] = {};
-    if (!localData[main][sub]) localData[main][sub] = { amounts: {}, percent: 0 };
-
-    // 2. 取得該大分類的年度總額 (假設你用來計算百分比的基準是該大類總額)
-    // 這裡建議從 localData[main] 下的所有子項加總取得最新總額
-    const months = Array.from({length: 12}, (_, i) => i + 1);
-    let rowTotal = 0;
-    
-    // 計算該大類目前的總金額
-    Object.keys(localData[main]).forEach(s => {
-        months.forEach(m => {
-            rowTotal += (localData[main][s].amounts?.[m] || 0);
-        });
-    });
-
-    // 3. 計算新金額
-    const p = parseFloat(percent) || 0;
-    const newTotalAmt = Math.round(rowTotal * (p / 100));
-    const monthlyAmt = Math.round(newTotalAmt / 12);
-
-    // 4. 更新數據
-    months.forEach(m => {
-        if (!localData[main][sub].amounts) localData[main][sub].amounts = {};
-        localData[main][sub].amounts[m] = monthlyAmt;
-    });
-    
-    localData[main][sub].percent = p; // 儲存百分比狀態
-
-    // 5. 重新渲染 (注意：函數名稱必須與你定義的一致，應該是 renderMatrixTable)
-    if (typeof renderMatrixTable === 'function') {
-        renderMatrixTable();
-    } else {
-        console.error("找不到 renderMatrixTable 函數");
-    }
-}
-    
-function renderMatrixTable() {
-    const body = document.getElementById('matrix-body');
-    if (!body) return; // 安全檢查
-    body.innerHTML = '';
-    const months = Array.from({length: 12}, (_, i) => i + 1);
-
-    // 1. 固定表頭
-    let header = `<tr class="sticky top-0 z-30 bg-white border-b shadow-sm">
-        <th class="sticky-col text-[10px] font-black text-slate-400 uppercase">Category / %</th>`;
-    months.forEach(m => {
-        header += `<th class="w-[100px] text-center text-[10px] font-black text-slate-400">${m}M</th>`;
-    });
-    body.innerHTML += header + `</tr>`;
-
-    const sections = [
-        { n: "REVENUE TARGETS", m: revenueMap, c: "green" },
-        { n: "EXPENSE BUDGETS", m: budgetMap, c: "blue" }
-    ];
-
-    sections.forEach(sec => {
-        // 大分類標題 (Revenue / Expense)
-        body.innerHTML += `<tr class="bg-slate-50"><td colspan="13" class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">${sec.n}</td></tr>`;
-        
-        Object.keys(sec.m).forEach(main => {
-            const isRev = sec.n.includes("REVENUE");
-            
-            // 2. 母分類行 (主項目)
-            let mainRow = `<tr class="group-row border-b border-slate-100">
-                <td class="sticky-col">
-                    <div class="flex flex-col gap-1.5">
-                        <span class="cursor-pointer hover:text-blue-600 font-bold text-slate-700 flex items-center" onclick="toggleSubRows('${main}')">
-                             <span class="mr-1 text-[8px]">▶</span> ${main}
-                        </span>
-                        <div class="flex items-center gap-1">
-                            <input type="number" step="0.1"
-                                   data-main-cat="${main}" 
-                                   data-type="${isRev ? 'revenue' : 'expense'}"
-                                   class="w-16 border border-slate-200 rounded text-[11px] px-1 font-black text-blue-600 outline-none focus:ring-1 focus:ring-blue-400" 
-                                   value="${getCurrentPercent(main, sec.n)}"
-                                   onchange="distributeByPercent('${main}', '${sec.n}', this)">
-                            <span class="text-[10px] text-slate-400 font-bold">%</span>
-                        </div>
-                    </div>
-                </td>`;
-            
-            // 計算母分類在該月份的總和 (顯示於主列)
-            months.forEach(m => {
-                const subs = sec.m[main];
-                const subSum = subs.reduce((s, sub) => s + (localData[main]?.[sub]?.amounts?.[m] || 0), 0);
-                mainRow += `<td class="p-1 border-r border-slate-50">
-                    <input type="text" class="matrix-input-v ${subSum > 0 ? (isRev ? 'text-green-600':'text-blue-600'):''}" 
-                           value="${subSum.toLocaleString()}" 
-                           onblur="distributeMainToSubs('${main}', ${m}, this)">
-                </td>`;
-            });
-            body.innerHTML += mainRow + `</tr>`;
-
-            // 3. 子項目行 (帶有百分比搜尋/設定功能)
-            sec.m[main].forEach(sub => {
-                let subRow = `<tr class="sub-row sub-${main} border-b border-dashed border-slate-50">
-                    <td class="sticky-col !pl-8 bg-white italic text-slate-400 text-[10px] font-medium">
-                        <div class="flex flex-col gap-1">
-                            <span>${sub}</span>
-                            <div class="flex items-center gap-0.5 mt-0.5">
-                                <input type="number" 
-                                       class="w-10 text-[9px] border-b border-slate-200 focus:border-blue-400 outline-none text-blue-500 font-bold bg-transparent" 
-                                       value="${localData[main]?.[sub]?.percent || 0}" 
-                                       step="0.1"
-                                       onchange="updateSubPercent('${main}', '${sub}', this.value)">
-                                <span class="text-[8px] text-slate-300">%</span>
-                            </div>
-                        </div>
-                    </td>`;
-
-                // 渲染該子項目 1-12 月的金額
-                months.forEach(m => {
-                    const val = localData[main]?.[sub]?.amounts?.[m] || 0;
-                    subRow += `<td class="p-1 border-r border-slate-50 border-dashed">
-                        <input type="text" class="matrix-input-v !font-normal text-slate-400" 
-                               value="${val.toLocaleString()}" 
-                               onblur="updateMatrixVal('${main}','${sub}',${m},this)">
-                    </td>`;
-                });
-                
-                body.innerHTML += subRow + `</tr>`;
-            });
-        });
-    });
-    
-    if (typeof updateMatrixSummary === "function") updateMatrixSummary();
-}
-    
-function setCurrency(val) {
-    document.getElementById('currency_type').value = val;
-    const btns = document.querySelectorAll('#currency_toggle button');
-    btns.forEach(b => {
-        const active = b.getAttribute('data-val') === val;
-        b.className = `flex-1 py-2 text-[10px] font-black rounded-xl transition-all ${active ? 'bg-white shadow-sm text-slate-950' : 'text-slate-400'}`;
-    });
-}
-
-function setTaxMode(val) {
-    document.getElementById('tax_mode').value = val;
-    const btns = document.querySelectorAll('#tax_toggle button');
-    btns.forEach(b => {
-        const active = b.getAttribute('data-val') === val;
-        b.className = `flex-1 py-2 text-[10px] font-black rounded-xl transition-all ${
-            active ? 'bg-white shadow-sm text-slate-950' : 'text-slate-400'
-        }`;
-    });
-}
-
-function openEditMode(record) {
-    editingId = record.id;
-    document.getElementById('trans_date').value = record.created_at.slice(0, 10);
-    document.getElementById('type').value = record.type;
-    refreshCategories();
-    document.getElementById('main_cat').value = record.main_category;
-    updateSubOptions();
-    document.getElementById('sub_cat').value = record.subcategory;
-
-    const rawNote = record.note || "";
-    const taxMatch = rawNote.match(/\[TAX_INCL:(?:([A-Z]{3})\s)?([\d,]+)\]/);
-
-    if (taxMatch) {
-        setCurrency(taxMatch[1] || 'TWD');
-        setTaxMode('GROSS');
-        document.getElementById('amt_view').value = taxMatch[2].replace(/,/g, "");
-    } else {
-        setCurrency('TWD');
-        setTaxMode('NET');
-        document.getElementById('amt_view').value = record.amount;
-    }
-    document.getElementById('note_field').value = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
-
-    numFormat(document.getElementById('amt_view'));
-
-    const submitBtn = document.getElementById('main-submit-btn');
-    if (submitBtn) {
-        submitBtn.innerText = "UPDATE TRANSACTION";
-        submitBtn.className = "flex-2 w-full bg-blue-600 text-white py-6 rounded-[2rem] font-black text-lg hover:bg-blue-700 transition-all uppercase tracking-widest";
-    }
-
-    const cancelBtn = document.getElementById('cancel-edit-btn');
-    if (cancelBtn) {
-        cancelBtn.classList.remove('hidden');
-    }
-}
-    
-    function getCurrentPercent(main, section) {
-        const isRev = section.includes("REVENUE");
-        const totalGoal = parseInt(document.getElementById(isRev ? 'yearly-revenue-goal' : 'yearly-expense-goal').value.replace(/,/g, '')) || 0;
-        if (totalGoal === 0) return "";
-        const subs = (revenueMap[main] || budgetMap[main]);
-        let currentMainTotal = 0;
-        for(let m=1; m<=12; m++) {
-            subs.forEach(sub => { currentMainTotal += (localData[main]?.[sub]?.amounts?.[m] || 0); });
-        }
-        const percent = (currentMainTotal / totalGoal) * 100;
-        return percent > 0 ? percent.toFixed(1) : "";
-    }
-
-    function distributeByPercent(main, section, el) {
-        const isRev = section.includes("REVENUE");
-        const type = isRev ? 'revenue' : 'expense';
-        const totalId = isRev ? 'yearly-revenue-goal' : 'yearly-expense-goal';
-        const yearlyTotal = parseInt(document.getElementById(totalId).value.replace(/,/g, '')) || 0;
-
-        if (yearlyTotal === 0) {
-            alert("請先輸入年度總目標金額！");
-            el.value = ""; return;
-        }
-
-        let inputPercent = parseFloat(el.value) || 0;
-        const allInputs = document.querySelectorAll(`input[data-type="${type}"]`);
-        let others = 0;
-        allInputs.forEach(i => { if (i !== el) others += (parseFloat(i.value) || 0); });
-
-        if (others + inputPercent > 100) {
-            const limit = 100 - others;
-            alert(`超過總額！該類別剩餘可用：${limit.toFixed(1)}%`);
-            inputPercent = Math.max(0, limit);
-            el.value = inputPercent.toFixed(1);
-            el.classList.add('alert-red');
-        } else {
-            el.classList.remove('alert-red');
-        }
-
-        const totalForMain = yearlyTotal * (inputPercent / 100);
-        const perMonth = Math.round(totalForMain / 12);
-        const subs = (revenueMap[main] || budgetMap[main]);
-        const perSub = Math.round(perMonth / subs.length);
-
-        if(!localData[main]) localData[main] = {};
-        subs.forEach(sub => {
-            if(!localData[main][sub]) localData[main][sub] = { amounts: {} };
-            for(let m=1; m<=12; m++) localData[main][sub].amounts[m] = perSub;
-        });
-
-        renderMatrixTable();
-    }
-
-    function updateMatrixSummary() {
-        ['revenue', 'expense'].forEach(type => {
-            const totalId = type === 'revenue' ? 'yearly-revenue-goal' : 'yearly-expense-goal';
-            const yearlyTotal = parseInt(document.getElementById(totalId).value.replace(/,/g, '')) || 0;
-            let sumP = 0;
-            document.querySelectorAll(`input[data-type="${type}"]`).forEach(el => sumP += (parseFloat(el.value) || 0));
-
-            const pEl = document.getElementById(`total-${type}-percent`);
-            const aEl = document.getElementById(`total-${type}-amt`);
-            pEl.innerText = `${sumP.toFixed(1)}%`;
-            aEl.innerText = `$${Math.round(yearlyTotal * (sumP/100)).toLocaleString()}`;
-            pEl.className = sumP > 100 ? "text-2xl italic font-black text-red-500 animate-pulse" : "text-2xl italic font-black text-white";
-        });
-    }
-
-    function formatAndSyncYearly(el, type) {
-        let raw = el.value.replace(/\D/g, "");
-        if (raw !== "") el.value = Number(raw).toLocaleString();
-        const sectionName = type === 'revenue' ? "REVENUE TARGETS" : "EXPENSE BUDGETS";
-        document.querySelectorAll(`input[data-type="${type}"]`).forEach(input => {
-            if (input.value) distributeByPercent(input.getAttribute('data-main-cat'), sectionName, input);
-        });
-    }
-
-    function distributeMainToSubs(main, month, el) {
-        const newVal = parseInt(el.value.replace(/,/g, '')) || 0;
-        const subs = (revenueMap[main] || budgetMap[main]);
-        const avg = Math.round(newVal / subs.length);
-        subs.forEach(sub => {
-            if(!localData[main]) localData[main] = {};
-            if(!localData[main][sub]) localData[main][sub] = { amounts: {} };
-            localData[main][sub].amounts[month] = avg;
-        });
-        renderMatrixTable();
-    }
-
-    function updateMatrixVal(m, s, mo, el) {
-        if(!localData[m]) localData[m] = {};
-        if(!localData[m][s]) localData[m][s] = { amounts: {} };
-        localData[m][s].amounts[mo] = parseInt(el.value.replace(/,/g, '')) || 0;
-        renderMatrixTable();
-    }
-
-    // --- Basic UI & Cloud ---
+    // --- 登入與基礎 ---
     function triggerLogin() { if(document.getElementById('pw_field').value === "8bit2026") { localStorage.setItem('8bit_logged', 'true'); showApp(); } else { alert("ACCESS DENIED"); } }
     function showApp() { document.getElementById('login-wall').style.display='none'; document.getElementById('app-content').classList.remove('hidden'); setTimeout(()=>document.getElementById('app-content').classList.add('opacity-100'),50); refreshCategories(); fetchCloudData(); }
     function logout() { localStorage.removeItem('8bit_logged'); location.reload(); }
-    function toggleMatrix() { document.getElementById('matrix-modal').classList.toggle('hidden'); if(!document.getElementById('matrix-modal').classList.contains('hidden')) renderMatrixTable(); }
-    function toggleSubRows(main) { document.querySelectorAll(`.sub-${main}`).forEach(el => el.classList.toggle('show-row')); }
-    function saveAndReload() { localStorage.setItem('8bit_v100_matrix', JSON.stringify(localData)); toggleMatrix(); fetchCloudData(); }
-async function fetchCloudData() {
-    const { data, error } = await _client.from('transactions').select('*');
-    if (error) { console.error(error); return; }
-    
-    currentFetchedData = data || []; 
-    filterAll(); // 這裡會連動執行 updateDashboard()
-}
 
-function filterAll() {
-    const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
-    const filterMonthStr = document.getElementById('monthFilter').value;
-    
-    // 1. 過濾資料
-    const monthlyData = currentFetchedData.filter(i => {
-        const matchesDate = i.created_at.startsWith(filterMonthStr);
-        const matchesKey = keyword === "" || 
-                           i.subcategory.toLowerCase().includes(keyword) || 
-                           i.main_category.toLowerCase().includes(keyword) || 
-                           (i.note || "").toLowerCase().includes(keyword);
-        return matchesDate && matchesKey;
-    });
-
-    const list = document.getElementById('detailList');
-    list.innerHTML = ''; // 清空舊列表
-    let mNet = 0;
-    let searchTotal = 0; 
-
-    // 2. 渲染每一筆交易紀錄
-    monthlyData.forEach(i => {
-        const isInc = i.type === 'income';
-        mNet += (isInc ? i.amount : -i.amount);
-        searchTotal += i.amount;
-
-        const rawNote = i.note || "";
-        // 處理備註中的稅務標籤與 #標籤 高亮
-        const cleanNote = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
-        const displayNote = cleanNote.replace(/(#[\w\u4e00-\u9fa5]+)/g, 
-            `<span class="text-blue-500 cursor-pointer hover:underline" onclick="event.stopPropagation(); setSearch('$1')">$1</span>`);
-
-        list.innerHTML += `
-            <div class="group bg-white p-5 rounded-[2rem] flex justify-between items-center mb-4 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-sm">
-                <div onclick='openEditMode(${JSON.stringify(i)})' class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase">${i.subcategory}</span>
-                        <span class="text-[9px] text-slate-300 font-bold uppercase">${i.main_category}</span>
-                    </div>
-                    <p class="text-[10px] text-slate-400 font-medium">
-                        ${i.created_at.slice(8, 10)}日 | ${displayNote}
-                    </p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <b class="text-xl font-black italic ${isInc ? 'text-green-600' : 'text-slate-950'}">$${i.amount.toLocaleString()}</b>
-                    <button onclick="deleteTransaction(${i.id}, event)" class="p-2 text-slate-200 hover:text-red-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
-                </div>
-            </div>`;
-    });
-
-    // 3. 如果有搜尋關鍵字，顯示搜尋總計
-    if (keyword !== "") {
-        list.innerHTML += `
-            <div class="sticky bottom-0 bg-slate-950 text-white p-6 rounded-[2rem] flex justify-between items-center shadow-2xl mt-4 border-t border-white/10">
-                <span class="text-[10px] font-black tracking-widest uppercase opacity-60">Search Total</span>
-                <b class="text-2xl font-black italic text-green-400">$${searchTotal.toLocaleString()}</b>
-            </div>`;
+    // --- 搜尋與過濾 (完整版) ---
+    function setSearch(val) {
+        const input = document.getElementById('searchInput');
+        if (input) { input.value = val; filterAll(); }
     }
 
-    // 4. 更新上方月份結餘文字
-    const netEl = document.getElementById('month-net-val');
-    if (netEl) netEl.innerText = `$${mNet.toLocaleString()}`;
+    function filterAll() {
+        const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+        const filterMonthStr = document.getElementById('monthFilter').value;
+        const monthlyData = currentFetchedData.filter(i => {
+            return i.created_at.startsWith(filterMonthStr) && (keyword === "" || i.subcategory.toLowerCase().includes(keyword) || i.main_category.toLowerCase().includes(keyword) || (i.note || "").toLowerCase().includes(keyword));
+        });
 
-    // 5. 同步更新進度條儀表板
-    updateDashboard();
-}
+        const list = document.getElementById('detailList');
+        list.innerHTML = ''; let mNet = 0; let searchTotal = 0;
 
-function updateDashboard() {
-    let yR = 0, yE = 0; 
-    let catActualsM = {}; // 當月實際
-    let catActualsY = {}; // 全年累計
-    
-    const filterMonthStr = document.getElementById('monthFilter').value; // 格式 YYYY-MM
+        monthlyData.forEach(i => {
+            const isInc = i.type === 'income';
+            mNet += (isInc ? i.amount : -i.amount);
+            searchTotal += i.amount;
+            const rawNote = i.note || "";
+            const taxMatch = rawNote.match(/\[TAX_INCL:(.*?)\]/);
+            const originalAmount = taxMatch ? taxMatch[1] : "";
+            const cleanNote = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
+            const displayNote = cleanNote.replace(/(#[\w\u4e00-\u9fa5]+)/g, `<span class="text-blue-500 cursor-pointer hover:underline" onclick="event.stopPropagation(); setSearch('$1')">$1</span>`);
 
-    // 1. 取得年度目標總額
-    const revGoal = parseInt(document.getElementById('yearly-revenue-goal')?.value.replace(/,/g, '')) || 0;
-    const expGoal = parseInt(document.getElementById('yearly-expense-goal')?.value.replace(/,/g, '')) || 0;
-
-    // 2. 遍歷所有資料進行統計
-    currentFetchedData.forEach(i => {
-        // 全年統計 (2026)
-        if (i.created_at.startsWith("2026")) {
-            if (i.type === 'income') yR += i.amount;
-            else yE += i.amount;
-
-            if (!catActualsY[i.main_category]) catActualsY[i.main_category] = 0;
-            catActualsY[i.main_category] += i.amount;
+            list.innerHTML += `
+                <div class="group bg-white p-5 rounded-[2rem] flex justify-between items-center mb-4 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-sm">
+                    <div onclick='openEditMode(${JSON.stringify(i)})' class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase">${i.subcategory}</span>
+                            <span class="text-[9px] text-slate-300 font-bold uppercase">${i.main_category}</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-medium">${i.created_at.slice(8, 10)}日 | ${displayNote} ${originalAmount ? `<span class="ml-2 px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-bold">${originalAmount}</span>` : ""}</p>
+                    </div>
+                    <div class="flex items-center gap-4"><b class="text-xl font-black italic ${isInc?'text-green-600':'text-slate-950'}">$${i.amount.toLocaleString()}</b><button onclick="deleteTransaction(${i.id}, event)" class="p-2 text-slate-200 hover:text-red-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></div>
+                </div>`;
+        });
+        if (keyword !== "") {
+            list.innerHTML += `<div class="sticky bottom-0 bg-slate-950 text-white p-6 rounded-[2rem] flex justify-between items-center shadow-2xl mt-4 border-t border-white/10"><span class="text-[10px] font-black tracking-widest uppercase opacity-60">Search Total</span><b class="text-2xl font-black italic text-green-400">$${searchTotal.toLocaleString()}</b></div>`;
         }
-        // 當月統計 (根據左側選取的月份)
-        if (i.created_at.startsWith(filterMonthStr)) {
-            if (!catActualsM[i.main_category]) catActualsM[i.main_category] = 0;
-            catActualsM[i.main_category] += i.amount;
-        }
-    });
+        document.getElementById('month-net-val').innerText = `$${mNet.toLocaleString()}`;
+        updateDashboard();
+    }
 
-    // 3. 核心進度條組件
-    const createHorizontalBar = (title, actualM, type) => {
-        const pctInput = document.querySelector(`input[data-main-cat="${title}"]`);
-        const allocatedPct = pctInput ? parseFloat(pctInput.value) || 0 : 0;
-        
-        const totalYearlyGoal = (type === 'income') ? revGoal : expGoal;
-        const mainYearlyTarget = totalYearlyGoal * (allocatedPct / 100);
-        const mainMonthlyTarget = mainYearlyTarget / 12;
+    // --- 儀表板與進度條 ---
+    function updateDashboard() {
+        let yR = 0, yE = 0; let catM = {}, catY = {};
+        const filterStr = document.getElementById('monthFilter').value;
+        const revGoal = parseInt(document.getElementById('yearly-revenue-goal')?.value.replace(/,/g, '')) || 0;
+        const expGoal = parseInt(document.getElementById('yearly-expense-goal')?.value.replace(/,/g, '')) || 0;
 
-        // 計算當月達成率 (0-100%)
-        const monthProgress = mainMonthlyTarget > 0 ? Math.min((actualM / mainMonthlyTarget) * 100, 100) : 0;
-        
-        // 計算全年累計進度 (%)
-        const yearlyActual = catActualsY[title] || 0;
-        const yearProgressPct = mainYearlyTarget > 0 ? ((yearlyActual / mainYearlyTarget) * 100).toFixed(1) : "0.0";
+        currentFetchedData.forEach(i => {
+            if (i.created_at.startsWith("2026")) {
+                if (i.type==='income') yR+=i.amount; else yE+=i.amount;
+                catY[i.main_category] = (catY[i.main_category]||0) + i.amount;
+            }
+            if (i.created_at.startsWith(filterStr)) catM[i.main_category] = (catM[i.main_category]||0) + i.amount;
+        });
 
-        const barColor = (type === 'income') ? 'bg-blue-600' : (monthProgress > 95 ? 'bg-red-500' : 'bg-slate-900');
+        const createBar = (title, actM, type) => {
+            const pct = parseFloat(document.querySelector(`input[data-main-cat="${title}"]`)?.value) || 0;
+            const target = (type==='income'?revGoal:expGoal) * (pct/100);
+            const mTarget = target/12;
+            const mProg = mTarget>0 ? Math.min(actM/mTarget*100, 100) : 0;
+            const yProg = target>0 ? (catY[title]/target*100).toFixed(1) : "0.0";
+            const color = type==='income'?'bg-blue-600':(mProg>95?'bg-red-500':'bg-slate-900');
 
-        return `
-            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 flex flex-col gap-3 hover:shadow-md transition-all">
+            return `<div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50 flex flex-col gap-3">
                 <div class="flex justify-between items-end">
-                    <div>
-                        <b class="text-xs text-slate-800 uppercase font-black block mb-1">${title}</b>
-                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
-                            Monthly: <span class="${monthProgress > 90 ? 'text-orange-500' : 'text-blue-500'}">${monthProgress.toFixed(1)}%</span>
-                        </span>
-                    </div>
-                    <div class="text-right">
-                        <b class="text-lg text-slate-950 font-black italic block">$${actualM.toLocaleString()}</b>
-                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
-                            Yearly Cum.: <span class="text-slate-950">${yearProgressPct}%</span>
-                        </span>
-                    </div>
+                    <div><b class="text-xs text-slate-800 uppercase font-black block mb-1">${title}</b><span class="text-[9px] text-slate-400 font-bold uppercase">Monthly: ${mProg.toFixed(1)}%</span></div>
+                    <div class="text-right"><b class="text-lg text-slate-950 font-black italic block">$${actM.toLocaleString()}</b><span class="text-[9px] text-slate-400 font-bold uppercase">Yearly Cum.: ${yProg}%</span></div>
                 </div>
-                <div class="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="absolute top-0 left-0 h-full ${barColor} transition-all duration-1000" style="width: ${monthProgress}%"></div>
-                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${color} transition-all duration-1000" style="width: ${mProg}%"></div></div>
             </div>`;
-    };
+        };
 
-    // 4. 定義類別並渲染到頁面
-// ... 在 updateDashboard 函數內的 createHorizontalBar 定義之後加入以下內容 ...
-
-    const incomeCats = ["線上通路", "線下通路", "B2B/其他"];
-    const expenseCats = ["產品開發與採購", "物流與倉儲營運", "行銷推廣與拍攝", "通路租金與抽成", "人事與管理", "短期專案/Pop-up"];
-
-    const dash = document.getElementById('annual-dashboard');
-    if (dash) {
-        dash.innerHTML = `
-            <div class="w-full flex flex-col gap-10">
-                <div class="bg-[#0F172A] p-10 md:p-14 rounded-[3rem] shadow-2xl border border-white/5 text-white">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl mx-auto">
-                        <div><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Total Revenue 2026</p><h3 class="text-5xl font-black italic text-white tracking-tighter">$${yR.toLocaleString()}</h3></div>
-                        <div class="md:border-l md:border-white/10 md:pl-10"><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Total Expense 2026</p><h3 class="text-5xl font-black italic text-white tracking-tighter">$${yE.toLocaleString()}</h3></div>
-                        <div class="md:border-l md:border-white/10 md:pl-10"><p class="text-[10px] text-slate-500 font-black mb-2 uppercase tracking-[0.3em]">Net Profit</p><h3 class="text-5xl font-black italic ${yR-yE >= 0 ? 'text-green-400' : 'text-red-500'} tracking-tighter">$${(yR-yE).toLocaleString()}</h3></div>
+        const inCats = ["線上通路", "線下通路", "B2B/其他"];
+        const exCats = ["產品開發與採購", "物流與倉儲營運", "行銷推廣與拍攝", "通路租金與抽成", "人事與管理", "短期專案/Pop-up"];
+        const dash = document.getElementById('annual-dashboard');
+        if (dash) {
+            dash.innerHTML = `<div class="w-full flex flex-col gap-10">
+                <div class="bg-[#0F172A] p-10 md:p-14 rounded-[3rem] shadow-2xl text-white">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-7xl mx-auto text-center md:text-left">
+                        <div><p class="text-[10px] text-slate-500 font-black mb-2 uppercase">Total Revenue 2026</p><h3 class="text-5xl font-black italic">$${yR.toLocaleString()}</h3></div>
+                        <div><p class="text-[10px] text-slate-500 font-black mb-2 uppercase">Total Expense 2026</p><h3 class="text-5xl font-black italic">$${yE.toLocaleString()}</h3></div>
+                        <div><p class="text-[10px] text-slate-500 font-black mb-2 uppercase">Net Profit</p><h3 class="text-5xl font-black italic ${yR-yE>=0?'text-green-400':'text-red-500'}">$${(yR-yE).toLocaleString()}</h3></div>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <section class="space-y-4">
-                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Income Performance</h4>
-                        <div class="flex flex-col gap-3">${incomeCats.map(cat => createHorizontalBar(cat, catActualsM[cat]||0, 'income')).join('')}</div>
-                    </section>
-                    <section class="space-y-4">
-                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Expense Status</h4>
-                        <div class="flex flex-col gap-3">${expenseCats.map(cat => createHorizontalBar(cat, catActualsM[cat]||0, 'expense')).join('')}</div>
-                    </section>
+                    <section class="space-y-4"><h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Income</h4>${inCats.map(c=>createBar(c,catM[c]||0,'income')).join('')}</section>
+                    <section class="space-y-4"><h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Expense</h4>${exCats.map(c=>createBar(c,catM[c]||0,'expense')).join('')}</section>
                 </div>
             </div>`;
-    }
-} // 確保 updateDashboard 的括號在這裡結束
-    
-async function deleteTransaction(id, event) {
-    event.stopPropagation();
-    if (!confirm("確定要刪除此筆紀錄？")) return;
-    const { error } = await _client.from('transactions').delete().eq('id', id);
-    if (!error) {
-        fetchCloudData(); // 不要 reload 整個頁面，只重新抓資料就好
-    }
-}
-
-function setSearch(val) {
-    const input = document.getElementById('searchInput');
-    if (input) {
-        input.value = val;
-        filterAll(); // 立即執行篩選
-    }
-}
-
-function filterAll() {
-    const searchInput = document.getElementById('searchInput');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-    const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
-    const filterMonthStr = document.getElementById('monthFilter').value;
-    
-    const monthlyData = currentFetchedData.filter(i => {
-        const matchesDate = i.created_at.startsWith(filterMonthStr);
-        const matchesKey = keyword === "" || 
-                           i.subcategory.toLowerCase().includes(keyword) || 
-                           i.main_category.toLowerCase().includes(keyword) || 
-                           (i.note || "").toLowerCase().includes(keyword);
-        return matchesDate && matchesKey;
-    });
-
-    const list = document.getElementById('detailList');
-    list.innerHTML = '';
-    let mNet = 0;
-    let searchTotal = 0; 
-
-    monthlyData.forEach(i => {
-        const isInc = i.type === 'income';
-        mNet += (isInc ? i.amount : -i.amount);
-        searchTotal += i.amount;
-
-const rawNote = i.note || "";
-    const taxMatch = rawNote.match(/\[TAX_INCL:(.*?)\]/);
-    const originalAmount = taxMatch ? taxMatch[1] : ""; // 如果有標籤就抓取內容，否則為空串
-
-    const cleanNote = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
-    const displayNote = cleanNote.replace(/(#[\w\u4e00-\u9fa5]+)/g, 
-        `<span class="text-blue-500 cursor-pointer hover:underline" onclick="event.stopPropagation(); setSearch('$1')">$1</span>`);
-list.innerHTML += `
-        <div class="group bg-white p-5 rounded-[2rem] flex justify-between items-center mb-4 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-sm">
-            <div onclick='openEditMode(${JSON.stringify(i)})' class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase">${i.subcategory}</span>
-                    <span class="text-[9px] text-slate-300 font-bold uppercase">${i.main_category}</span>
-                </div>
-                <p class="text-[10px] text-slate-400 font-medium">
-                    ${i.created_at.slice(8, 10)}日 | ${displayNote} 
-                    ${originalAmount ? `<span class="ml-2 px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-bold">${originalAmount}</span>` : ""}
-                </p>
-            </div>
-            <div class="flex items-center gap-4">
-                <b class="text-xl font-black italic text-slate-950">$${i.amount.toLocaleString()}</b>
-                <button onclick="deleteTransaction(${i.id}, event)" class="p-2 text-slate-200 hover:text-red-500 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                </button>
-            </div>
-        </div>`;
-});
-
-    if (keyword !== "") {
-        list.innerHTML += `
-            <div class="sticky bottom-0 bg-slate-950 text-white p-6 rounded-[2rem] flex justify-between items-center shadow-2xl mt-4 border-t border-white/10">
-                <span class="text-[10px] font-black tracking-widest uppercase opacity-60">Search Total</span>
-                <b class="text-2xl font-black italic text-green-400">$${searchTotal.toLocaleString()}</b>
-            </div>`;
-    }
-    document.getElementById('month-net-val').innerText = `$${mNet.toLocaleString()}`;
-    updateDashboard();
-} 
-    
-function refreshCategories() { 
-    const t=document.getElementById('type').value, m=document.getElementById('main_cat'); 
-    if(!m) return;
-    m.innerHTML=''; 
-    const target=(t==='income'?revenueMap:budgetMap); 
-    Object.keys(target).forEach(c=>m.innerHTML+=`<option value="${c}">${c}</option>`); 
-    updateSubOptions(); 
-}
-
-function updateSubOptions() { 
-    const t=document.getElementById('type').value, m=document.getElementById('main_cat').value, s=document.getElementById('sub_cat'); 
-    if(!s) return;
-    s.innerHTML=''; 
-    const target=(t==='income'?revenueMap:budgetMap); 
-    if(target[m]) target[m].forEach(sub=>s.innerHTML+=`<option value="${sub}">${sub}</option>`); 
-}
-
-function numPlain(el) { el.value=el.value.replace(/,/g,''); el.type='number'; }
-function numFormat(el) { const v=el.value; document.getElementById('amt_val').value=v; el.type='text'; el.value=v?Number(v).toLocaleString():''; }
-
-async function submitToCloud() {
-    const amt = parseInt(document.getElementById('amt_val').value) || 0;
-    if(amt === 0) { alert("請輸入金額"); return; }
-
-    const payload = {
-        created_at: document.getElementById('trans_date').value,
-        amount: amt,
-        type: document.getElementById('type').value,
-        main_category: document.getElementById('main_cat').value,
-        subcategory: document.getElementById('sub_cat').value,
-        note: document.getElementById('note_field').value
-    };
-
-    let res;
-    if (editingId) {
-        res = await _client.from('transactions').update(payload).eq('id', editingId);
-    } else {
-        res = await _client.from('transactions').insert([payload]);
+        }
     }
 
-    if (res.error) {
-        alert("操作失敗: " + res.error.message);
-    } else {
-        resetForm(); // 回復 UI 狀態
-        fetchCloudData(); // 重新整理資料
-    }
-}
-
-function resetForm() {
-    editingId = null; // 重設編輯狀態
-    const submitBtn = document.getElementById('main-submit-btn');
-    if (submitBtn) {
-        submitBtn.innerText = "ADD TRANSACTION";
-        submitBtn.className = "w-full bg-slate-950 text-white py-6 rounded-[2rem] font-black text-lg hover:bg-slate-800 transition-all uppercase tracking-widest";
+    // --- 其他邏輯 (矩陣、資料存取) ---
+    async function fetchCloudData() { const {data,error} = await _client.from('transactions').select('*'); if(!error){currentFetchedData=data||[]; filterAll();} }
+    async function submitToCloud() {
+        const amt = parseInt(document.getElementById('amt_val').value) || 0;
+        if(amt === 0) return alert("請輸入金額");
+        const payload = { created_at: document.getElementById('trans_date').value, amount: amt, type: document.getElementById('type').value, main_category: document.getElementById('main_cat').value, subcategory: document.getElementById('sub_cat').value, note: document.getElementById('note_field').value };
+        const res = editingId ? await _client.from('transactions').update(payload).eq('id', editingId) : await _client.from('transactions').insert([payload]);
+        if(!res.error){ resetForm(); fetchCloudData(); }
     }
 
-    const cancelBtn = document.getElementById('cancel-edit-btn');
-    if (cancelBtn) {
-        cancelBtn.classList.add('hidden');
-    }
-
-    document.getElementById('trans_date').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('amt_view').value = '';
-    document.getElementById('amt_val').value = '0';
-    document.getElementById('note_field').value = '';
-
-    setCurrency('TWD');
-    setTaxMode('NET');
-    refreshCategories();
-}
-    
-function renderAnalysis(monthlyData, allData, currentMonthIdx) {
-    const revGoal = parseInt(document.getElementById('yearly-revenue-goal').value.replace(/,/g, '')) || 0;
-    const expGoal = parseInt(document.getElementById('yearly-expense-goal').value.replace(/,/g, '')) || 0;
-
-    const expContainer = document.getElementById('expense-analysis');
-    if(expContainer) {
-        expContainer.innerHTML = '';
-        Object.keys(budgetMap).forEach(main => {
-            const spent = allData.filter(i => i.main_category === main && i.type === 'expense').reduce((sum, i) => sum + i.amount, 0);
-            const pctInput = document.querySelector(`input[data-main-cat="${main}"]`);
-            const allocatedPct = pctInput ? parseFloat(pctInput.value) || 0 : 0;
-            const mainBudget = expGoal * (allocatedPct / 100);
-            const progress = mainBudget > 0 ? Math.min((spent / mainBudget) * 100, 100) : 0;
-            expContainer.innerHTML += `
-                <div class="mb-4">
-                    <div class="flex justify-between text-[10px] font-black mb-2 uppercase">
-                        <span>${main}</span>
-                        <span class="${progress > 90 ? 'text-red-500' : 'text-slate-400'}">${progress.toFixed(1)}%</span>
-                    </div>
-                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-slate-950 transition-all duration-1000" style="width: ${progress}%"></div>
-                    </div>
-                </div>`;
+    function renderMatrixTable() {
+        const body = document.getElementById('matrix-body'); body.innerHTML = '';
+        const months = Array.from({length: 12}, (_, i) => i + 1);
+        let header = `<tr class="sticky top-0 z-30 bg-white border-b shadow-sm"><th class="sticky-col text-[10px] font-black text-slate-400 uppercase">Category / %</th>`;
+        months.forEach(m => { header += `<th class="w-[100px] text-center text-[10px] font-black text-slate-400">${m}M</th>`; });
+        body.innerHTML += header + `</tr>`;
+        const sections = [{ n: "REVENUE TARGETS", m: revenueMap }, { n: "EXPENSE BUDGETS", m: budgetMap }];
+        sections.forEach(sec => {
+            body.innerHTML += `<tr class="bg-slate-50"><td colspan="13" class="p-4 text-[10px] font-black text-slate-400 uppercase text-center">${sec.n}</td></tr>`;
+            Object.keys(sec.m).forEach(main => {
+                const isRev = sec.n.includes("REVENUE");
+                let row = `<tr class="group-row border-b"><td class="sticky-col"><div class="flex flex-col gap-1.5"><span class="cursor-pointer font-bold text-slate-700" onclick="toggleSubRows('${main}')">▶ ${main}</span><div class="flex items-center gap-1"><input type="number" step="0.1" data-main-cat="${main}" data-type="${isRev?'revenue':'expense'}" class="w-16 border rounded text-[11px] font-black text-blue-600 px-1" value="${getCurrentPercent(main, sec.n)}" onchange="distributeByPercent('${main}', '${sec.n}', this)">%</div></div></td>`;
+                months.forEach(m => {
+                    const sum = sec.m[main].reduce((s, sub) => s + (localData[main]?.[sub]?.amounts?.[m] || 0), 0);
+                    row += `<td class="p-1 border-r"><input type="text" class="matrix-input-v ${sum>0?(isRev?'text-green-600':'text-blue-600'):''}" value="${sum.toLocaleString()}" onblur="distributeMainToSubs('${main}', ${m}, this)"></td>`;
+                });
+                body.innerHTML += row + `</tr>`;
+                sec.m[main].forEach(sub => {
+                    let subRow = `<tr class="sub-row sub-${main} border-b border-dashed border-slate-50"><td class="sticky-col !pl-8 bg-white italic text-slate-400 text-[10px]"><div><span>${sub}</span><div class="flex items-center mt-0.5"><input type="number" class="w-10 border-b outline-none text-blue-500 font-bold bg-transparent" value="${localData[main]?.[sub]?.percent || 0}" step="0.1" onchange="updateSubPercent('${main}', '${sub}', this.value)">%</div></div></td>`;
+                    months.forEach(m => { subRow += `<td class="p-1 border-r border-slate-50 border-dashed"><input type="text" class="matrix-input-v !font-normal text-slate-400" value="${(localData[main]?.[sub]?.amounts?.[m] || 0).toLocaleString()}" onblur="updateMatrixVal('${main}','${sub}',${m},this)"></td>`; });
+                    body.innerHTML += subRow + `</tr>`;
+                });
+            });
         });
+        updateMatrixSummary();
     }
 
-    const revContainer = document.getElementById('revenue-analysis');
-    if(revContainer) {
-        revContainer.innerHTML = '';
-        Object.keys(revenueMap).forEach(main => {
-            const earned = allData.filter(i => i.main_category === main && i.type === 'income').reduce((sum, i) => sum + i.amount, 0);
-            const pctInput = document.querySelector(`input[data-main-cat="${main}"]`);
-            const targetPct = pctInput ? parseFloat(pctInput.value) || 0 : 0;
-            const mainTarget = revGoal * (targetPct / 100);
-            const progress = mainTarget > 0 ? Math.min((earned / mainTarget) * 100, 100) : 0;
-            revContainer.innerHTML += `
-                <div class="mb-4">
-                    <div class="flex justify-between text-[10px] font-black mb-2 uppercase">
-                        <span>${main}</span>
-                        <span class="text-green-600">${progress.toFixed(1)}%</span>
-                    </div>
-                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-green-500 transition-all duration-1000" style="width: ${progress}%"></div>
-                    </div>
-                </div>`;
-        });
-    }
-}
+    // 輔助函數 (補齊)
+    function updateSubPercent(m, s, p) { if(!localData[m]) localData[m]={}; if(!localData[m][s]) localData[m][s]={amounts:{}}; localData[m][s].percent=parseFloat(p)||0; renderMatrixTable(); }
+    function getCurrentPercent(main, sec) { const isRev=sec.includes("REVENUE"); const goal=parseInt(document.getElementById(isRev?'yearly-revenue-goal':'yearly-expense-goal').value.replace(/,/g,''))||0; if(goal===0) return 0; let sum=0; const subs=(revenueMap[main]||budgetMap[main]); for(let m=1;m<=12;m++){subs.forEach(s=>{sum+=(localData[main]?.[s]?.amounts?.[m]||0);});} return (sum/goal*100).toFixed(1); }
+    function distributeByPercent(main, sec, el) { const isRev=sec.includes("REVENUE"); const goal=parseInt(document.getElementById(isRev?'yearly-revenue-goal':'yearly-expense-goal').value.replace(/,/g,''))||0; if(goal===0) return alert("請先輸入金額"); const p=parseFloat(el.value)||0; const perM=Math.round(goal*(p/100)/12); const subs=(revenueMap[main]||budgetMap[main]); const perS=Math.round(perM/subs.length); if(!localData[main]) localData[main]={}; subs.forEach(s=>{ if(!localData[main][s]) localData[main][s]={amounts:{}}; for(let m=1;m<=12;m++) localData[main][s].amounts[m]=perS; }); renderMatrixTable(); }
+    function distributeMainToSubs(main, m, el) { const val=parseInt(el.value.replace(/,/g,''))||0; const subs=(revenueMap[main]||budgetMap[main]); const perS=Math.round(val/subs.length); if(!localData[main]) localData[main]={}; subs.forEach(s=>{ if(!localData[main][s]) localData[main][s]={amounts:{}}; localData[main][s].amounts[m]=perS; }); renderMatrixTable(); }
+    function updateMatrixVal(m, s, mo, el) { if(!localData[m])localData[m]={}; if(!localData[m][s])localData[m][s]={amounts:{}}; localData[m][s].amounts[mo]=parseInt(el.value.replace(/,/g,''))||0; renderMatrixTable(); }
+    function updateMatrixSummary() { ['revenue','expense'].forEach(t=>{ const goal=parseInt(document.getElementById(`yearly-${t}-goal`).value.replace(/,/g,''))||0; let sumP=0; document.querySelectorAll(`input[data-type="${t}"]`).forEach(el=>sumP+=parseFloat(el.value)||0); document.getElementById(`total-${t}-percent`).innerText=sumP.toFixed(1)+"%"; document.getElementById(`total-${t}-amt`).innerText="$"+Math.round(goal*(sumP/100)).toLocaleString(); }); }
+    function formatAndSyncYearly(el, t) { let raw=el.value.replace(/\D/g,""); if(raw!=="") el.value=Number(raw).toLocaleString(); updateMatrixSummary(); }
+    function toggleMatrix() { document.getElementById('matrix-modal').classList.toggle('hidden'); if(!document.getElementById('matrix-modal').classList.contains('hidden')) renderMatrixTable(); }
+    function toggleSubRows(main) { document.querySelectorAll(`.sub-${main}`).forEach(el => el.classList.toggle('show-row')); }
+    function saveAndReload() { localStorage.setItem('8bit_v100_matrix', JSON.stringify(localData)); toggleMatrix(); fetchCloudData(); }
+    function refreshCategories() { const t=document.getElementById('type').value, m=document.getElementById('main_cat'); m.innerHTML=''; const target=(t==='income'?revenueMap:budgetMap); Object.keys(target).forEach(c=>m.innerHTML+=`<option value="${c}">${c}</option>`); updateSubOptions(); }
+    function updateSubOptions() { const t=document.getElementById('type').value, m=document.getElementById('main_cat').value, s=document.getElementById('sub_cat'); s.innerHTML=''; const target=(t==='income'?revenueMap:budgetMap); if(target[m]) target[m].forEach(sub=>s.innerHTML+=`<option value="${sub}">${sub}</option>`); }
+    function numPlain(el) { el.value=el.value.replace(/,/g,''); el.type='number'; }
+    function numFormat(el) { const v=el.value; document.getElementById('amt_val').value=v; el.type='text'; el.value=v?Number(v).toLocaleString():''; }
+    function resetForm() { editingId=null; document.getElementById('main-submit-btn').innerText="ADD TRANSACTION"; document.getElementById('cancel-edit-btn').classList.add('hidden'); document.getElementById('trans_date').value=new Date().toISOString().slice(0,10); document.getElementById('amt_view').value=''; document.getElementById('amt_val').value='0'; document.getElementById('note_field').value=''; refreshCategories(); }
 </script>
 </body>
 </html>
