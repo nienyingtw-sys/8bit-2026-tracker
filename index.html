@@ -153,51 +153,55 @@
 
     function setSearch(val) { document.getElementById('searchInput').value = val; filterAll(); }
 
-    function filterAll() {
-        const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
-        const filterStr = document.getElementById('monthFilter').value;
-        const monthlyData = currentFetchedData.filter(i => {
-            return i.created_at.startsWith(filterStr) && (keyword === "" || i.subcategory.toLowerCase().includes(keyword) || i.main_category.toLowerCase().includes(keyword) || (i.note || "").toLowerCase().includes(keyword));
-        });
+function filterAll() {
+    const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+    const filterMonthStr = document.getElementById('monthFilter').value;
+    
+    const monthlyData = currentFetchedData.filter(i => {
+        const matchesDate = i.created_at.startsWith(filterMonthStr);
+        const matchesKey = keyword === "" || 
+                           i.subcategory.toLowerCase().includes(keyword) || 
+                           i.main_category.toLowerCase().includes(keyword) || 
+                           (i.note || "").toLowerCase().includes(keyword);
+        return matchesDate && matchesKey;
+    });
 
-        const list = document.getElementById('detailList');
-        list.innerHTML = ''; let mNet = 0; let searchTotal = 0;
+    const list = document.getElementById('detailList');
+    list.innerHTML = '';
+    let mNet = 0;
 
-        monthlyData.forEach(i => {
-            const isInc = i.type === 'income';
-            mNet += (isInc ? i.amount : -i.amount);
-            searchTotal += i.amount;
+    monthlyData.forEach(i => {
+        const isInc = i.type === 'income';
+        mNet += (isInc ? i.amount : -i.amount);
 
-            const rawNote = i.note || "";
-            const taxMatch = rawNote.match(/\[TAX_INCL:(.*?)\]/);
-            const originalAmt = taxMatch ? taxMatch[1] : "";
-            const cleanNote = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
-            const displayNote = cleanNote.replace(/(#[\w\u4e00-\u9fa5]+)/g, `<span class="text-blue-500 cursor-pointer hover:underline" onclick="event.stopPropagation(); setSearch('$1')">$1</span>`);
-
-            list.innerHTML += `
-                <div class="group bg-white p-5 rounded-[2rem] flex justify-between items-center mb-4 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-sm" onclick='openEditMode(${JSON.stringify(i)})'>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase">${i.subcategory}</span>
-                            <span class="text-[9px] text-slate-300 font-bold uppercase">${i.main_category}</span>
-                        </div>
-                        <p class="text-[10px] text-slate-400 font-medium">${i.created_at.slice(8, 10)}日 | ${displayNote} ${originalAmt ? `<span class="ml-2 px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-bold">${originalAmt}</span>` : ""}</p>
+        const rawNote = i.note || "";
+        const cleanNote = rawNote.replace(/\[TAX_INCL:.*?\]/g, "").trim();
+        
+        // 渲染列表，注意 onclick 改為傳入 i.id
+        list.innerHTML += `
+            <div class="group bg-white p-5 rounded-[2rem] flex justify-between items-center mb-4 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-sm" 
+                 onclick="handleEditClick('${i.id}')">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase">${i.subcategory}</span>
+                        <span class="text-[9px] text-slate-300 font-bold uppercase">${i.main_category}</span>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <b class="text-xl font-black italic ${isInc?'text-green-600':'text-slate-950'}">$${i.amount.toLocaleString()}</b>
-                        <button onclick="deleteTransaction(${i.id}, event)" class="p-2 text-slate-200 hover:text-red-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                    </div>
-                </div>`;
-        });
+                    <p class="text-[10px] text-slate-400 font-medium">${i.created_at.slice(8, 10)}日 | ${cleanNote}</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <b class="text-xl font-black italic ${isInc ? 'text-green-600' : 'text-slate-950'}">$${i.amount.toLocaleString()}</b>
+                    <button onclick="deleteTransaction('${i.id}', event)" class="p-2 text-slate-200 hover:text-red-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>`;
+    });
 
-        if (keyword !== "") {
-            list.innerHTML += `<div class="sticky bottom-0 bg-slate-950 text-white p-6 rounded-[2rem] flex justify-between items-center shadow-2xl mt-4 border-t border-white/10"><span class="text-[10px] font-black tracking-widest uppercase opacity-60">Search Total</span><b class="text-2xl font-black italic text-green-400">$${searchTotal.toLocaleString()}</b></div>`;
-        }
-        document.getElementById('month-net-val').innerText = `$${mNet.toLocaleString()}`;
-        updateDashboard();
-    }
+    document.getElementById('month-net-val').innerText = `$${mNet.toLocaleString()}`;
+    updateDashboard();
+}
 
     // --- 儀表板與進度條 ---
     function updateDashboard() {
@@ -283,7 +287,28 @@
     }
 
     // --- 資料存取與輔助 ---
-    async function fetchCloudData() { const {data,error} = await _client.from('transactions').select('*'); if(!error){currentFetchedData=data||[]; filterAll();} }
+async function fetchCloudData() {
+    // 1. 抓取交易流水帳資料
+    const resTrans = await _client.from('transactions').select('*');
+    if (!resTrans.error) {
+        currentFetchedData = resTrans.data || [];
+    }
+
+    // 2. 抓取雲端矩陣策略資料
+    const resSettings = await _client.from('strategy_settings').select('*').eq('id', 1).maybeSingle();
+    
+    if (!resSettings.error && resSettings.data) {
+        localData = resSettings.data.matrix_json || {};
+        // 將儲存的年度目標填回輸入框，如果沒有資料則顯示 $ 0
+        if(document.getElementById('yearly-revenue-goal'))
+            document.getElementById('yearly-revenue-goal').value = resSettings.data.yearly_revenue_goal || "$ 0";
+        if(document.getElementById('yearly-expense-goal'))
+            document.getElementById('yearly-expense-goal').value = resSettings.data.yearly_expense_goal || "$ 0";
+    }
+
+    // 執行畫面渲染
+    filterAll();
+}
     async function submitToCloud() {
         const amt = parseInt(document.getElementById('amt_val').value) || 0;
         if(amt === 0) return alert("請輸入金額");
@@ -320,7 +345,31 @@
         });
         updateMatrixSummary();
     }
+async function saveAndReload() {
+    // 取得畫面上目前的年度目標金額
+    const revGoal = document.getElementById('yearly-revenue-goal').value;
+    const expGoal = document.getElementById('yearly-expense-goal').value;
 
+    const payload = {
+        id: 1, // 確保只有一筆設定紀錄，每次儲存都是覆蓋這筆
+        matrix_json: localData,
+        yearly_revenue_goal: revGoal,
+        yearly_expense_goal: expGoal,
+        updated_at: new Date()
+    };
+
+    // 儲存至 Supabase (資料表：strategy_settings)
+    const { error } = await _client.from('strategy_settings').upsert([payload]);
+
+    if (error) {
+        console.error("Save Error:", error);
+        alert("雲端儲存失敗，請檢查 Supabase 資料表是否存在。");
+    } else {
+        alert("策略已成功同步至雲端！");
+        toggleMatrix(); // 關閉彈窗
+        fetchCloudData(); // 重新載入數據
+    }
+}
     // 基礎計算輔助
     function updateSubPercent(m, s, p) { if(!localData[m]) localData[m]={}; if(!localData[m][s]) localData[m][s]={amounts:{}}; localData[m][s].percent=parseFloat(p)||0; renderMatrixTable(); }
     function getCurrentPercent(main, sec) { const isRev=sec.includes("REVENUE"); const goal=parseInt(document.getElementById(isRev?'yearly-revenue-goal':'yearly-expense-goal').value.replace(/,/g,''))||0; if(goal===0) return 0; let sum=0; const subs=(revenueMap[main]||budgetMap[main]); for(let m=1;m<=12;m++){subs.forEach(s=>{sum+=(localData[main]?.[s]?.amounts?.[m]||0);});} return (sum/goal*100).toFixed(1); }
@@ -331,7 +380,6 @@
     function formatAndSyncYearly(el, t) { let raw=el.value.replace(/\D/g,""); if(raw!=="") el.value=Number(raw).toLocaleString(); updateMatrixSummary(); }
     function toggleMatrix() { document.getElementById('matrix-modal').classList.toggle('hidden'); if(!document.getElementById('matrix-modal').classList.contains('hidden')) renderMatrixTable(); }
     function toggleSubRows(main) { document.querySelectorAll(`.sub-${main}`).forEach(el => el.classList.toggle('show-row')); }
-    function saveAndReload() { localStorage.setItem('8bit_v100_matrix', JSON.stringify(localData)); toggleMatrix(); fetchCloudData(); }
     function refreshCategories() { const t=document.getElementById('type').value, m=document.getElementById('main_cat'); m.innerHTML=''; const target=(t==='income'?revenueMap:budgetMap); Object.keys(target).forEach(c => m.innerHTML+=`<option value="${c}">${c}</option>`); updateSubOptions(); }
     function updateSubOptions() { const t=document.getElementById('type').value, m=document.getElementById('main_cat').value, s=document.getElementById('sub_cat'); s.innerHTML=''; const target=(t==='income'?revenueMap:budgetMap); if(target[m]) target[m].forEach(sub => s.innerHTML+=`<option value="${sub}">${sub}</option>`); }
     function setCurrency(val) { document.getElementById('currency_type').value = val; document.querySelectorAll('#currency_toggle button').forEach(b => { b.className = b.getAttribute('data-val') === val ? "flex-1 py-1.5 text-[9px] font-black rounded-xl bg-white shadow-sm text-slate-950" : "flex-1 py-1.5 text-[9px] font-black rounded-xl text-slate-400"; }); }
